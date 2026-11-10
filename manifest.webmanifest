@@ -1,0 +1,15 @@
+{
+  "name": "TrekMap",
+  "short_name": "TrekMap",
+  "description": "Mappe offline e GPS per il trekking",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b5e20",
+  "theme_color": "#1b5e20",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

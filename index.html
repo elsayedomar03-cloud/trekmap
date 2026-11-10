@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TrekMap">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>TrekMap</title>
+<style>
+  :root {
+    --green: #2e7d32; --green-d: #1b5e20; --red: #d32f2f; --ink: #1c2421; --muted: #5f6b66;
+    --panel: #ffffffee; --line: #d5dbd8; --bg: #e8e6df;
+    --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --panel: #1d2421ee; --ink: #e8efec; --muted: #9aa8a2; --line: #34403b; --bg: #1a1f1d; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+    font: 16px/1.35 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  .glass { background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--line); }
+  #stats { position: fixed; top: calc(var(--safe-t) + 10px); left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; border-radius: 18px; font-weight: 600; font-variant-numeric: tabular-nums;
+    white-space: nowrap; display: none; }
+  #stats.on { display: block; }
+  #stats .rec { color: var(--red); margin-right: 6px; animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  #empty { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; padding: 0 32px 120px; gap: 10px; pointer-events: none; }
+  #empty h1 { margin: 0; font-size: 26px; }
+  #empty p { margin: 0; color: var(--muted); max-width: 320px; }
+  #bar { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-b) + 12px); display: flex;
+    gap: 8px; padding: 8px; border-radius: 20px; }
+  button, .btn { appearance: none; border: 0; font: inherit; font-weight: 600; border-radius: 14px;
+    padding: 12px 6px; flex: 1; background: transparent; color: var(--ink); display: flex; flex-direction: column;
+    align-items: center; gap: 2px; font-size: 12px; cursor: pointer; }
+  button .i, .btn .i { font-size: 22px; line-height: 1; }
+  button.on { background: var(--green); color: #fff; }
+  button.rec.on { background: var(--red); }
+  button.rec .i { color: var(--red); }
+  button.rec.on .i { color: #fff; }
+  button:active { opacity: .7; }
+  #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: flex-end; }
+  #sheet.on { display: flex; }
+  #sheet .card { width: 100%; max-height: 80%; overflow: auto; background: var(--bg); color: var(--ink);
+    border-radius: 22px 22px 0 0; padding: 18px 16px calc(var(--safe-b) + 18px); }
+  #sheet h2 { margin: 0 0 12px; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+  #sheet h2 span { font-size: 28px; color: var(--muted); cursor: pointer; padding: 0 6px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line);
+    border-radius: 12px; margin-bottom: 8px; background: var(--panel); }
+  .item.sel { border-color: var(--green); box-shadow: 0 0 0 2px var(--green) inset; }
+  .item .n { flex: 1; min-width: 0; }
+  .item .n b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .n small { color: var(--muted); }
+  .item .del { flex: none; width: 40px; color: var(--red); padding: 8px; }
+  .primary { background: var(--green); color: #fff; flex-direction: row; justify-content: center; gap: 8px;
+    padding: 14px; font-size: 16px; width: 100%; margin: 6px 0 14px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 8px 2px; }
+  #msg { position: fixed; left: 16px; right: 16px; top: calc(var(--safe-t) + 54px); padding: 12px 14px;
+    border-radius: 14px; display: none; }
+  #msg.on { display: block; }
+  #recenter { position: fixed; right: 14px; bottom: calc(var(--safe-b) + 104px); width: 46px; height: 46px;
+    border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 22px; padding: 0; flex: none; }
+  #recenter.on { display: flex; }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+
+<div id="stats" class="glass"></div>
+<div id="msg" class="glass"></div>
+
+<div id="empty">
+  <h1>⛰️ TrekMap</h1>
+  <p id="emptyText">Nessuna mappa caricata. Tocca <b>Mappe</b> e aggiungi un file <b>.mbtiles</b> dal tuo iPhone.</p>
+</div>
+
+<button id="recenter" class="glass" title="Centra sulla mia posizione">◎</button>
+
+<div id="bar" class="glass">
+  <button id="bMaps"><span class="i">🗺️</span>Mappe</button>
+  <button id="bGps"><span class="i">📍</span>GPS</button>
+  <button id="bRec" class="rec"><span class="i">●</span>Registra</button>
+  <button id="bGpx"><span class="i">🥾</span>Tracce</button>
+</div>
+
+<div id="sheet"><div class="card" id="card"></div></div>
+<input id="fileMap" type="file" hidden>
+<input id="fileGpx" type="file" hidden>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
